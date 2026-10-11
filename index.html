@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brain Tumor Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh; overflow-x: hidden;
+    background: radial-gradient(ellipse at center, #13254a 0%, #0a1530 60%, #060d20 100%) fixed;
+    color: #e8eefc; font-family: "Inter", sans-serif;
+  }
+  #brain { position: fixed; inset: 0; z-index: 0; }
+  .front {
+    position: relative; z-index: 1; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: space-between; padding: 7vh 20px 6vh; text-align: center;
+  }
+  h1 {
+    font-family: "Orbitron", sans-serif; font-weight: 800;
+    font-size: clamp(2rem, 6.5vw, 5rem); letter-spacing: .08em; line-height: 1.1;
+    text-shadow: 0 0 30px rgba(140,180,255,.6);
+  }
+  .bottom { display: flex; flex-direction: column; align-items: center; gap: 26px; }
+  .note {
+    max-width: 560px; font-size: 1rem; line-height: 1.6; color: #c9d6f2;
+    background: rgba(10,22,50,.55); backdrop-filter: blur(6px);
+    padding: 14px 20px; border-radius: 14px; border: 1px solid rgba(160,190,255,.18);
+  }
+  .buttons { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    width: 210px; padding: 18px 16px; border-radius: 16px;
+    border: 1px solid rgba(160,190,255,.35); background: rgba(15,30,65,.6);
+    backdrop-filter: blur(6px); color: #e8eefc; text-decoration: none;
+    transition: transform .25s, border-color .25s, box-shadow .25s;
+  }
+  .btn:hover { transform: translateY(-4px); border-color: #9cc0ff; box-shadow: 0 0 28px rgba(140,180,255,.35); }
+  .btn .icon { font-size: 1.7rem; display: block; margin-bottom: 6px; }
+  .btn .title { font-weight: 600; font-size: 1.02rem; display: block; }
+  .btn .sub { font-size: .8rem; opacity: .7; display: block; margin-top: 3px; }
+  .small { font-size: .72rem; opacity: .45; }
+</style>
+</head>
+<body>
+
+<canvas id="brain"></canvas>
+
+<div class="front">
+  <h1>BRAIN TUMOR<br>DETECTION</h1>
+
+  <div class="bottom">
+    <p class="note">A 3D model that outlines brain tumours in MRI scans. It works well when every scan is there. I wanted to see what happens when one is missing, and whether the model even notices.</p>
+
+    <div class="buttons">
+      <a class="btn" href="patients.html"><span class="icon">🧠</span><span class="title">Open a patient</span><span class="sub">See the tumor in 3D</span></a>
+      <a class="btn" href="missing.html"><span class="icon">🧪</span><span class="title">Missing MRI test</span><span class="sub">What if one scan is missing?</span></a>
+      <a class="btn" href="results.html"><span class="icon">📊</span><span class="title">Results</span><span class="sub">100 test patients</span></a>
+    </div>
+
+    <div class="small">Data: BraTS 2021 · Research demo, not for medical use</div>
+  </div>
+</div>
+
+<script>
+const cv = document.getElementById("brain"), ctx = cv.getContext("2d");
+let W, H, S, ox, oy, shape, stars = [], sparks = [];
+
+function brainPath() {
+  const P = (x, y) => [ox + x * S, oy + y * S];
+  const p = new Path2D();
+  p.moveTo(...P(0.12, 0.58));
+  p.bezierCurveTo(...P(0.02, 0.45), ...P(0.05, 0.20), ...P(0.25, 0.12));
+  p.bezierCurveTo(...P(0.40, 0.02), ...P(0.65, 0.02), ...P(0.80, 0.12));
+  p.bezierCurveTo(...P(0.95, 0.22), ...P(0.98, 0.42), ...P(0.90, 0.55));
+  p.bezierCurveTo(...P(0.86, 0.60), ...P(0.80, 0.62), ...P(0.74, 0.60));
+  p.bezierCurveTo(...P(0.84, 0.68), ...P(0.79, 0.81), ...P(0.66, 0.79));
+  p.bezierCurveTo(...P(0.60, 0.78), ...P(0.57, 0.73), ...P(0.58, 0.68));
+  p.lineTo(...P(0.56, 0.95)); p.lineTo(...P(0.50, 0.95)); p.lineTo(...P(0.50, 0.71));
+  p.bezierCurveTo(...P(0.40, 0.73), ...P(0.25, 0.70), ...P(0.12, 0.58));
+  p.closePath();
+  return p;
+}
+function folds() {
+  const P = (x, y) => [ox + x * S, oy + y * S];
+  const f = new Path2D();
+  f.moveTo(...P(0.18, 0.52)); f.bezierCurveTo(...P(0.35, 0.44), ...P(0.50, 0.50), ...P(0.66, 0.44));
+  f.moveTo(...P(0.48, 0.07)); f.bezierCurveTo(...P(0.44, 0.20), ...P(0.50, 0.30), ...P(0.46, 0.42));
+  f.moveTo(...P(0.25, 0.20)); f.bezierCurveTo(...P(0.30, 0.28), ...P(0.24, 0.36), ...P(0.30, 0.42));
+  f.moveTo(...P(0.70, 0.16)); f.bezierCurveTo(...P(0.66, 0.26), ...P(0.74, 0.34), ...P(0.70, 0.46));
+  f.moveTo(...P(0.64, 0.66)); f.bezierCurveTo(...P(0.70, 0.70), ...P(0.74, 0.72), ...P(0.78, 0.70));
+  f.moveTo(...P(0.62, 0.72)); f.bezierCurveTo(...P(0.68, 0.76), ...P(0.72, 0.77), ...P(0.76, 0.75));
+  return f;
+}
+function setup() {
+  W = cv.width = innerWidth; H = cv.height = innerHeight;
+  S = Math.min(W * 0.55, H * 0.5);
+  ox = (W - S) / 2; oy = (H - S * 0.95) / 2 - H * 0.04;
+  shape = brainPath(); stars = [];
+  const n = Math.round(S * 0.6);
+  while (stars.length < n) {
+    const x = ox + Math.random() * S, y = oy + Math.random() * S * 0.95;
+    if (ctx.isPointInPath(shape, x, y)) stars.push({ hx: x, hy: y, x, y, r: Math.random() * 1.5 + 0.4, t: Math.random() * 6.28, sp: 0.01 + Math.random() * 0.03 });
+  }
+  sparks = [];
+}
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = "rgba(170,200,255,0.35)"; ctx.lineWidth = 1.2; ctx.stroke(shape);
+  ctx.strokeStyle = "rgba(170,200,255,0.18)"; ctx.stroke(folds());
+  for (const s of stars) { s.t += s.sp; s.x = s.hx + Math.sin(s.t) * 1.5; s.y = s.hy + Math.cos(s.t * 0.8) * 1.5; }
+  const D = S * 0.07; ctx.lineWidth = 0.5;
+  for (let i = 0; i < stars.length; i++) for (let j = i + 1; j < stars.length; j++) {
+    const d = Math.hypot(stars[i].x - stars[j].x, stars[i].y - stars[j].y);
+    if (d < D) { ctx.strokeStyle = `rgba(160,195,255,${0.28 * (1 - d / D)})`; ctx.beginPath(); ctx.moveTo(stars[i].x, stars[i].y); ctx.lineTo(stars[j].x, stars[j].y); ctx.stroke(); }
+  }
+  for (const s of stars) {
+    const a = 0.45 + 0.55 * Math.abs(Math.sin(s.t * 1.7));
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283);
+    ctx.fillStyle = `rgba(235,242,255,${a})`; ctx.shadowColor = "#9cc0ff"; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0;
+  }
+  if (Math.random() < 0.25) {
+    const s = stars[Math.floor(Math.random() * stars.length)];
+    if (s && s.hy < oy + S * 0.35) sparks.push({ x: s.hx, y: s.hy, vy: -(0.3 + Math.random() * 0.6), vx: (Math.random() - 0.5) * 0.3, life: 1 });
+  }
+  for (const p of sparks) { p.x += p.vx; p.y += p.vy; p.life -= 0.006; ctx.beginPath(); ctx.arc(p.x, p.y, 1.1, 0, 6.283); ctx.fillStyle = `rgba(235,242,255,${Math.max(p.life, 0)})`; ctx.fill(); }
+  sparks = sparks.filter(p => p.life > 0);
+  requestAnimationFrame(draw);
+}
+addEventListener("resize", setup);
+setup(); draw();
+</script>
+</body>
+</html>

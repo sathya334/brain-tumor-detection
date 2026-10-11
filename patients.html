@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patients · Brain Tumor Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at top, #13254a 0%, #0a1530 55%, #060d20 100%) fixed;
+    color: #e8eefc; font-family: "Inter", sans-serif; line-height: 1.6;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 40px 20px 80px; }
+  .back { color: #9cc0ff; text-decoration: none; font-size: .9rem; }
+  h1 { font-family: "Orbitron", sans-serif; font-size: clamp(1.6rem, 5vw, 2.8rem); letter-spacing: .06em;
+       margin: 18px 0 6px; text-shadow: 0 0 24px rgba(140,180,255,.5); }
+  p { color: #b9c6e4; max-width: 75ch; margin-bottom: 12px; }
+  .layout { display: grid; grid-template-columns: 260px 1fr 280px; gap: 18px; margin-top: 22px; }
+  .panel { background: rgba(15,30,65,.6); border: 1px solid rgba(160,190,255,.25); border-radius: 16px; padding: 16px; }
+  .panel h3 { font-family: "Orbitron", sans-serif; font-size: .85rem; letter-spacing: .08em; color: #9cc0ff; margin: 4px 0 10px; }
+  .filters { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .filters button { border: 1px solid rgba(160,190,255,.3); background: none; color: #b9c6e4; border-radius: 20px; padding: 4px 10px; font: 500 .78rem "Inter"; cursor: pointer; }
+  .filters button.on { background: #9cc0ff; color: #0a1530; border-color: #9cc0ff; }
+  .list { display: grid; gap: 6px; max-height: 560px; overflow-y: auto; padding-right: 4px; }
+  .case { text-align: left; border: 1px solid rgba(160,190,255,.18); background: rgba(255,255,255,.03); color: #e8eefc;
+          border-radius: 10px; padding: 8px 10px; cursor: pointer; font: inherit; transition: border-color .2s; }
+  .case:hover { border-color: #9cc0ff; } .case.on { border-color: #9cc0ff; background: rgba(156,192,255,.12); }
+  .case .id { font-weight: 600; font-size: .9rem; }
+  .case .d { font-size: .75rem; color: #b9c6e4; }
+  .tag { font-size: .65rem; text-transform: uppercase; letter-spacing: .06em; padding: 1px 6px; border-radius: 10px; margin-left: 6px; }
+  .tag.best { background: rgba(126,226,176,.18); color: #7ee2b0; } .tag.typical { background: rgba(156,192,255,.15); color: #9cc0ff; } .tag.hard { background: rgba(255,138,122,.18); color: #ff8a7a; }
+  .viewer { background: #000; border-radius: 16px; overflow: hidden; position: relative; aspect-ratio: 4/3; min-height: 340px; border: 1px solid rgba(160,190,255,.25); }
+  .viewer canvas { width: 100%; height: 100%; display: block; }
+  .msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: #b9c6e4; font-size: .95rem; }
+  .keys { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: #b9c6e4; margin-top: 10px; }
+  .keys i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .layers { display: grid; gap: 6px; }
+  .layers button, .views button {
+    text-align: left; border: 1px solid rgba(160,190,255,.25); background: rgba(255,255,255,.03); color: #e8eefc;
+    padding: 8px 12px; border-radius: 10px; font: 500 .88rem "Inter"; cursor: pointer;
+  }
+  .layers button.on, .views button.on { border-color: #9cc0ff; background: rgba(156,192,255,.15); color: #cfe0ff; }
+  .views { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: .84rem; }
+  dt { color: #9cc0ff; } dd { color: #e8eefc; }
+  .hint { font-size: .78rem; color: #7f8eb0; margin-top: 8px; }
+  .small { font-size: .8rem; color: #7f8eb0; margin-top: 30px; }
+  @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } .list { max-height: 260px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Back</a>
+  <h1>OPEN A PATIENT</h1>
+  <p>Twenty patients from the test set, from the best predictions to the hardest ones. The grey image is the FLAIR scan. Switch layers to compare the doctors' outline with what the model drew, and what it draws when T1ce is missing. Drag to move through the brain; in 3D, drag to rotate.</p>
+
+  <div class="layout">
+    <div class="panel">
+      <h3>PATIENTS</h3>
+      <div class="filters" id="filters">
+        <button data-f="all" class="on">All</button><button data-f="best">Best</button><button data-f="typical">Typical</button><button data-f="hard">Hard</button>
+      </div>
+      <div class="list" id="list">Loading…</div>
+    </div>
+
+    <div>
+      <div class="viewer"><canvas id="gl"></canvas><div class="msg" id="msg">Pick a patient on the left.</div></div>
+      <div class="keys" id="keys"><span><i style="background:#2f6fd6"></i>Tumor core</span><span><i style="background:#3fbf5a"></i>Swelling</span><span><i style="background:#e8453c"></i>Active tumor</span></div>
+    </div>
+
+    <div class="panel">
+      <h3>LAYER</h3>
+      <div class="layers" id="layers">
+        <button data-l="mri">MRI only</button>
+        <button data-l="truth">Doctors' outline</button>
+        <button data-l="prediction" class="on">Model prediction</button>
+        <button data-l="prediction_no_t1ce">Prediction without T1ce</button>
+        <button data-l="gradcam_wt">Grad-CAM · whole tumor</button>
+        <button data-l="gradcam_et">Grad-CAM · active tumor</button>
+      </div>
+      <h3 style="margin-top:16px">VIEW</h3>
+      <div class="views" id="views"><button data-v="slices" class="on">Slices</button><button data-v="3d">3D</button></div>
+      <h3 style="margin-top:16px">REPORT</h3>
+      <div id="report"><p class="hint">No patient selected.</p></div>
+    </div>
+  </div>
+
+  <p class="small">Data: BraTS 2021 (public, anonymized). Volumes are from the model's prediction; location is approximate. Research demo, not for medical use.</p>
+</div>
+
+<script type="module">
+const BASE = "cases/";
+let PATIENTS = [], current = null, layer = "prediction", view = "slices", nv = null, NVlib = null;
+
+// ---------- load the viewer library ----------
+async function getNiivue() {
+  try { return (await import("https://cdn.jsdelivr.net/npm/@niivue/niivue@0.57.0/+esm")).Niivue; } catch (e) {}
+  try { return (await import("https://cdn.jsdelivr.net/npm/@niivue/niivue@0.44.2/+esm")).Niivue; } catch (e) {}
+  await new Promise((ok, bad) => { const s = document.createElement("script"); s.src = "https://unpkg.com/@niivue/niivue@0.38.0/dist/niivue.umd.js"; s.onload = ok; s.onerror = bad; document.head.appendChild(s); });
+  return window.niivue.Niivue;
+}
+async function ensureViewer() {
+  if (nv) return nv;
+  const Niivue = await getNiivue();
+  nv = new Niivue({ backColor: [0, 0, 0, 1], show3Dcrosshair: true });
+  await nv.attachToCanvas(document.getElementById("gl"));
+  return nv;
+}
+function msg(t) { const m = document.getElementById("msg"); m.textContent = t || ""; m.style.display = t ? "flex" : "none"; }
+
+// ---------- patient list ----------
+const f2 = v => (v == null || isNaN(v)) ? "–" : Number(v).toFixed(2);
+fetch(BASE + "patients.json").then(r => { if (!r.ok) throw 0; return r.json(); }).then(p => {
+  PATIENTS = p; renderList("all");
+}).catch(() => document.getElementById("list").textContent = "Could not load patients.json");
+
+function renderList(f) {
+  const el = document.getElementById("list");
+  el.innerHTML = PATIENTS.filter(p => f === "all" || p.case_type === f).map(p => `
+    <button class="case ${current && current.id === p.id ? "on" : ""}" data-id="${p.id}">
+      <div class="id">#${p.id.replace("BraTS2021_", "")}<span class="tag ${p.case_type}">${p.case_type}</span></div>
+      <div class="d">Dice ${f2(p.dice.WT)} / ${f2(p.dice.TC)} / ${f2(p.dice.ET)}</div>
+    </button>`).join("");
+  el.querySelectorAll(".case").forEach(b => b.onclick = () => openPatient(b.dataset.id));
+}
+document.querySelectorAll("#filters button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#filters button").forEach(x => x.classList.toggle("on", x === b));
+  renderList(b.dataset.f);
+});
+
+// ---------- open a patient ----------
+async function openPatient(id) {
+  current = PATIENTS.find(p => p.id === id);
+  document.querySelectorAll(".case").forEach(b => b.classList.toggle("on", b.dataset.id === id));
+  const v = current.volume_cm3 || {}, n = current.dice_without_t1ce || {};
+  document.getElementById("report").innerHTML = `<dl>
+    <dt>Patient</dt><dd>#${id.replace("BraTS2021_", "")} (${current.case_type})</dd>
+    <dt>Type</dt><dd>Glioma</dd>
+    <dt>Location</dt><dd>${current.location_approx || "–"}</dd>
+    <dt>Whole</dt><dd>${v.WT ?? "–"} cm³</dd>
+    <dt>Core</dt><dd>${v.TC ?? "–"} cm³</dd>
+    <dt>Active</dt><dd>${v.ET ?? "–"} cm³</dd>
+    <dt>Dice</dt><dd>${f2(current.dice.WT)} / ${f2(current.dice.TC)} / ${f2(current.dice.ET)}</dd>
+    <dt>No T1ce</dt><dd style="color:#ff8a7a">${f2(n.WT)} / ${f2(n.TC)} / ${f2(n.ET)}</dd>
+  </dl><p class="hint">Dice order: whole / core / active.</p>`;
+  await load();
+}
+
+async function load() {
+  if (!current) return;
+  msg("Loading scans…");
+  try {
+    await ensureViewer();
+    const pre = BASE + current.id + "_";
+    const vols = [{ url: pre + "flair.nii.gz", colormap: "gray" }];
+    const cam = layer.startsWith("gradcam");
+    if (layer !== "mri") {
+      vols.push(cam
+        ? { url: pre + layer + ".nii.gz", colormap: "hot", opacity: 0.6, cal_min: 60, cal_max: 255 }
+        : { url: pre + layer + ".nii.gz", colormap: "jet", opacity: 0.55, cal_min: 0.5, cal_max: 4 });
+    }
+    await nv.loadVolumes(vols);
+    if (layer !== "mri" && !cam) {
+      try {
+        nv.volumes[1].setColormapLabel({ R:[0,47,63,0,232], G:[0,111,191,0,69], B:[0,214,90,0,60], A:[0,255,255,0,255], I:[0,1,2,3,4] });
+        nv.updateGLVolume();
+      } catch (e) { /* falls back to the jet colours */ }
+    }
+    document.getElementById("keys").style.visibility = (layer === "mri" || cam) ? "hidden" : "visible";
+    setView();
+    msg("");
+  } catch (e) {
+    console.error(e);
+    msg("Could not load this patient's scans.");
+  }
+}
+function setView() {
+  if (!nv) return;
+  nv.setSliceType(view === "3d" ? nv.sliceTypeRender : nv.sliceTypeMultiplanar);
+}
+document.querySelectorAll("#layers button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#layers button").forEach(x => x.classList.toggle("on", x === b));
+  layer = b.dataset.l; load();
+});
+document.querySelectorAll("#views button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#views button").forEach(x => x.classList.toggle("on", x === b));
+  view = b.dataset.v; setView();
+});
+</script>
+</body>
+</html>

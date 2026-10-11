@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Results · Brain Tumor Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at top, #13254a 0%, #0a1530 55%, #060d20 100%) fixed;
+    color: #e8eefc; font-family: "Inter", sans-serif; line-height: 1.6;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 40px 20px 80px; }
+  .back { color: #9cc0ff; text-decoration: none; font-size: .9rem; }
+  h1 { font-family: "Orbitron", sans-serif; font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: .06em;
+       margin: 18px 0 6px; text-shadow: 0 0 24px rgba(140,180,255,.5); }
+  h2 { font-family: "Orbitron", sans-serif; font-size: 1.2rem; letter-spacing: .05em; margin: 48px 0 14px; color: #cfe0ff; }
+  p { color: #b9c6e4; max-width: 70ch; margin-bottom: 12px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 28px; }
+  .card { background: rgba(15,30,65,.6); border: 1px solid rgba(160,190,255,.25); border-radius: 16px; padding: 20px; }
+  .card b { display: block; font-family: "Orbitron", sans-serif; font-size: 2rem; margin-bottom: 6px; }
+  .card span { font-size: .88rem; color: #b9c6e4; }
+  .good b { color: #7ee2b0; } .bad b { color: #ff8a7a; }
+  .tablebox { overflow-x: auto; border-radius: 14px; border: 1px solid rgba(160,190,255,.25); }
+  table { width: 100%; border-collapse: collapse; background: rgba(15,30,65,.6); font-size: .95rem; }
+  th, td { padding: 12px 14px; text-align: right; border-bottom: 1px solid rgba(160,190,255,.12); }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  th { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: #9cc0ff; }
+  tr:last-child td { border-bottom: 0; }
+  .low { color: #ff8a7a; font-weight: 600; } .up { color: #7ee2b0; font-weight: 600; }
+  .note { border-left: 3px solid #9cc0ff; background: rgba(120,160,255,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 18px 0; color: #cfdaf2; }
+  .small { font-size: .8rem; color: #7f8eb0; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Back</a>
+  <h1>RESULTS</h1>
+  <p>Everything below was measured on 100 patients the models never saw during training. Dice score shows how well the prediction overlaps the doctors' outline (1.0 = perfect).</p>
+
+  <div class="cards">
+    <div class="card good"><b>0.885</b><span>Mean Dice with all four MRI scans</span></div>
+    <div class="card bad"><b>0.015</b><span>Active tumor Dice when T1ce is missing</span></div>
+    <div class="card bad"><b>0.434</b><span>Whole tumor Dice when FLAIR is missing</span></div>
+    <div class="card good"><b>0.391</b><span>Active tumor without T1ce, after dropout training</span></div>
+  </div>
+
+  <h2>1 · Normal model, one scan missing</h2>
+  <div class="tablebox"><table>
+    <tr><th>Scans</th><th>Missing</th><th>Whole</th><th>Core</th><th>Active</th></tr>
+    <tr><td>All four</td><td>–</td><td>0.915</td><td>0.880</td><td>0.860</td></tr>
+    <tr><td>T1ce, T1, T2</td><td>FLAIR</td><td class="low">0.434</td><td>0.571</td><td>0.581</td></tr>
+    <tr><td>FLAIR, T1, T2</td><td>T1ce</td><td>0.870</td><td class="low">0.199</td><td class="low">0.015</td></tr>
+    <tr><td>FLAIR, T1ce, T2</td><td>T1</td><td>0.898</td><td>0.856</td><td>0.836</td></tr>
+    <tr><td>FLAIR, T1ce, T1</td><td>T2</td><td>0.885</td><td>0.847</td><td>0.853</td></tr>
+  </table></div>
+  <div class="note">T1 and T2 can go missing with almost no damage. Without FLAIR the outline of the whole tumor breaks. Without T1ce the active part of the tumor almost disappears.</div>
+
+  <h2>2 · Does the model notice?</h2>
+  <p>Each scan was predicted 8 times with small flips. If the answers disagree, the model is unsure.</p>
+  <div class="tablebox"><table>
+    <tr><th>Condition</th><th></th><th>Dice</th><th>Uncertainty</th><th>Change</th></tr>
+    <tr><td>All four scans</td><td></td><td>0.885</td><td>0.0172</td><td>–</td></tr>
+    <tr><td>No FLAIR</td><td></td><td>0.545</td><td>0.0515</td><td class="up">3× higher</td></tr>
+    <tr><td>No T1ce</td><td></td><td>0.363</td><td>0.0196</td><td class="low">barely moves</td></tr>
+  </table></div>
+  <div class="note">Without FLAIR the model gets unsure, so it warns us. Without T1ce it stays confident while failing. That is the silent failure. (Spearman r = −0.115, p = 0.047.)</div>
+
+  <h2>3 · The fix: dropout training</h2>
+  <p>A second model was trained with random scans switched off, so it learns not to depend on just one.</p>
+  <div class="tablebox"><table>
+    <tr><th>Model</th><th>Missing</th><th>Whole</th><th>Core</th><th>Active</th></tr>
+    <tr><td>Normal</td><td>–</td><td>0.915</td><td>0.880</td><td>0.860</td></tr>
+    <tr><td>Dropout</td><td>–</td><td>0.911</td><td>0.837</td><td>0.855</td></tr>
+    <tr><td>Normal</td><td>FLAIR</td><td class="low">0.434</td><td>0.571</td><td>0.581</td></tr>
+    <tr><td>Dropout</td><td>FLAIR</td><td class="up">0.831</td><td class="up">0.805</td><td class="up">0.828</td></tr>
+    <tr><td>Normal</td><td>T1ce</td><td>0.870</td><td class="low">0.199</td><td class="low">0.015</td></tr>
+    <tr><td>Dropout</td><td>T1ce</td><td>0.892</td><td class="up">0.563</td><td class="up">0.391</td></tr>
+  </table></div>
+  <div class="note">Big gains when a scan is missing, and only a small cost when all scans are there. Still, 0.391 is far from 0.860: contrast enhancement is simply not visible without T1ce.</div>
+
+  <h2>4 · Grad-CAM (a limitation)</h2>
+  <p>Share of the model's attention that lands inside the real tumor, averaged over 100 patients.</p>
+  <div class="tablebox"><table>
+    <tr><th>Model</th><th>Scans</th><th>Whole</th><th>Core</th><th>Active</th></tr>
+    <tr><td>Normal</td><td>all four</td><td>36%</td><td>2%</td><td>5%</td></tr>
+    <tr><td>Normal</td><td>no T1ce</td><td>19%</td><td>3%</td><td>3%</td></tr>
+    <tr><td>Dropout</td><td>all four</td><td>13%</td><td>7%</td><td>4%</td></tr>
+    <tr><td>Dropout</td><td>no T1ce</td><td>18%</td><td>9%</td><td>4%</td></tr>
+  </table></div>
+  <div class="note">For the small regions (core and active) only a few percent of the attention lands inside the tumor, so Grad-CAM cannot explain them reliably. The conclusions here rest on Dice and uncertainty.</div>
+
+  <p class="small">Data: BraTS 2021 (public, anonymized). 199 training, 49 validation, 100 test patients. Normal model trained 70 epochs, dropout model 100 epochs. Research demo, not for medical use.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Missing MRI Test · Brain Tumor Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at top, #13254a 0%, #0a1530 55%, #060d20 100%) fixed;
+    color: #e8eefc; font-family: "Inter", sans-serif; line-height: 1.6;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 40px 20px 80px; }
+  .back { color: #9cc0ff; text-decoration: none; font-size: .9rem; }
+  h1 { font-family: "Orbitron", sans-serif; font-size: clamp(1.6rem, 5vw, 2.8rem); letter-spacing: .06em;
+       margin: 18px 0 6px; text-shadow: 0 0 24px rgba(140,180,255,.5); }
+  h2 { font-family: "Orbitron", sans-serif; font-size: 1.15rem; letter-spacing: .05em; margin: 48px 0 14px; color: #cfe0ff; }
+  p { color: #b9c6e4; max-width: 70ch; margin-bottom: 12px; }
+  .panel { background: rgba(15,30,65,.6); border: 1px solid rgba(160,190,255,.25); border-radius: 16px; padding: 22px; margin-top: 16px; }
+  .choose { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 6px; }
+  .choose button {
+    border: 1px solid rgba(160,190,255,.35); background: rgba(15,30,65,.6); color: #e8eefc;
+    padding: 10px 16px; border-radius: 12px; font: 600 .95rem "Inter"; cursor: pointer; transition: all .2s;
+  }
+  .choose button:hover { border-color: #9cc0ff; }
+  .choose button.on { background: #9cc0ff; color: #0a1530; border-color: #9cc0ff; }
+  .scans { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .scan { padding: 6px 12px; border-radius: 20px; font-size: .82rem; font-weight: 600; border: 1px solid rgba(160,190,255,.35); }
+  .scan.off { opacity: .35; text-decoration: line-through; }
+  .row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: center; margin-bottom: 14px; }
+  .row .lbl { font-size: .88rem; color: #b9c6e4; }
+  .pair { display: grid; gap: 5px; }
+  .bar { height: 22px; border-radius: 6px; background: rgba(255,255,255,.06); position: relative; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 6px; transition: width .7s ease; }
+  .bar em { position: absolute; right: 8px; top: 0; font: 600 .78rem/22px "Inter"; font-style: normal; }
+  .bar.na em { left: 8px; right: auto; color: #7f8eb0; font-weight: 400; }
+  .legend { display: flex; gap: 18px; font-size: .82rem; color: #b9c6e4; margin-bottom: 14px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .verdict { margin-top: 16px; padding: 14px 18px; border-radius: 12px; font-size: .95rem; }
+  .verdict.warn { background: rgba(255,138,122,.12); border-left: 3px solid #ff8a7a; color: #ffd2cb; }
+  .verdict.ok { background: rgba(126,226,176,.1); border-left: 3px solid #7ee2b0; color: #cff5e2; }
+  .verdict.info { background: rgba(120,160,255,.1); border-left: 3px solid #9cc0ff; color: #cfdaf2; }
+  .heat { display: grid; grid-template-columns: 1.6fr repeat(3, 1fr); gap: 4px; font-size: .85rem; }
+  .heat div { padding: 10px 8px; border-radius: 6px; text-align: center; }
+  .heat .h { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: #9cc0ff; background: none; }
+  .heat .name { text-align: left; color: #cfdaf2; background: rgba(255,255,255,.03); }
+  .heat .cell { font-weight: 600; color: #0a1530; }
+  .scale { display: flex; align-items: center; gap: 8px; font-size: .78rem; color: #b9c6e4; margin-top: 12px; }
+  .scale span.grad { flex: 0 0 160px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, #e2584a, #e8b14a, #7ee2b0); }
+  .unc { display: flex; align-items: flex-end; gap: 40px; height: 200px; padding: 10px 10px 0; border-bottom: 1px solid rgba(160,190,255,.2); }
+  .unc .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .unc .col b { width: 60%; max-width: 80px; border-radius: 6px 6px 0 0; transition: height .7s ease; }
+  .unc .col span { font-size: .8rem; margin-bottom: 6px; color: #e8eefc; font-weight: 600; }
+  .uncl { display: flex; gap: 40px; padding: 8px 10px 0; }
+  .uncl div { flex: 1; text-align: center; font-size: .8rem; color: #b9c6e4; }
+  .small { font-size: .8rem; color: #7f8eb0; margin-top: 40px; }
+  @media (max-width: 600px) { .row { grid-template-columns: 80px 1fr; } .unc, .uncl { gap: 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Back</a>
+  <h1>MISSING MRI TEST</h1>
+  <p>Every patient normally has four MRI scans: FLAIR, T1, T1ce (with contrast) and T2. In real hospitals one is often missing. Pick a scan to take away and see what happens to the model, measured on 100 test patients.</p>
+
+  <div class="choose" id="choose">
+    <button data-c="all4" class="on">Keep all four</button>
+    <button data-c="no_FLAIR">Remove FLAIR</button>
+    <button data-c="no_T1ce">Remove T1ce</button>
+    <button data-c="no_T1">Remove T1</button>
+    <button data-c="no_T2">Remove T2</button>
+  </div>
+
+  <div class="panel">
+    <div class="scans" id="scans"></div>
+    <div class="legend"><span><i style="background:#8a96b3"></i>Normal model</span><span><i style="background:#9cc0ff"></i>Dropout model (trained with missing scans)</span></div>
+    <div id="bars"></div>
+    <div id="verdict"></div>
+  </div>
+
+  <h2>Everything at once</h2>
+  <p>Dice for every model and setting. Red means the model lost the tumor, green means it found it.</p>
+  <div class="panel">
+    <div class="heat" id="heat"></div>
+    <div class="scale">0.0 <span class="grad"></span> 1.0</div>
+  </div>
+
+  <h2>Does the model notice?</h2>
+  <p>To measure doubt, each scan was predicted 8 times with small flips. Taller bar = more disagreement = the model is less sure.</p>
+  <div class="panel">
+    <div class="unc">
+      <div class="col"><span>0.0172</span><b style="height:33%;background:#8a96b3"></b></div>
+      <div class="col"><span>0.0515</span><b style="height:100%;background:#7ee2b0"></b></div>
+      <div class="col"><span>0.0196</span><b style="height:38%;background:#ff8a7a"></b></div>
+    </div>
+    <div class="uncl"><div>All four<br>Dice 0.885</div><div>No FLAIR<br>Dice 0.545</div><div>No T1ce<br>Dice 0.363</div></div>
+    <div class="verdict warn">Without FLAIR the doubt goes up three times, so the model is warning us. Without T1ce it fails even worse, but the doubt barely moves. It fails quietly.</div>
+  </div>
+
+  <p class="small">100 test patients from BraTS 2021. A missing scan was simulated by replacing it with zeros. Dropout model was only tested without FLAIR and without T1ce. Research demo, not for medical use.</p>
+</div>
+
+<script>
+const D = {
+  normal:  { all4:{WT:.915,TC:.880,ET:.860}, no_FLAIR:{WT:.434,TC:.571,ET:.581}, no_T1ce:{WT:.870,TC:.199,ET:.015}, no_T1:{WT:.898,TC:.856,ET:.836}, no_T2:{WT:.885,TC:.847,ET:.853} },
+  dropout: { all4:{WT:.911,TC:.837,ET:.855}, no_FLAIR:{WT:.831,TC:.805,ET:.828}, no_T1ce:{WT:.892,TC:.563,ET:.391} }
+};
+const NAME = { all4:"All four", no_FLAIR:"No FLAIR", no_T1ce:"No T1ce", no_T1:"No T1", no_T2:"No T2" };
+const REG = { WT:"Whole tumor", TC:"Tumor core", ET:"Active tumor" };
+const SAY = {
+  all4: ["info", "With all four scans the model does well: about 0.89 on average."],
+  no_FLAIR: ["warn", "Without FLAIR the outline of the whole tumor breaks (0.915 → 0.434). The dropout model holds on much better (0.831)."],
+  no_T1ce: ["warn", "Without T1ce the active tumor is almost gone (0.860 → 0.015), and the model does not even become unsure. The dropout model brings it back to 0.391."],
+  no_T1: ["ok", "Losing T1 barely matters. The other scans carry the same information."],
+  no_T2: ["ok", "Losing T2 barely matters either."]
+};
+
+function bar(v, col) {
+  if (v == null) return `<div class="bar na"><em>not tested</em></div>`;
+  return `<div class="bar"><i style="width:${v*100}%;background:${col}"></i><em>${v.toFixed(3)}</em></div>`;
+}
+function show(c) {
+  const gone = c === "all4" ? "" : c.slice(3);
+  document.getElementById("scans").innerHTML = ["FLAIR","T1","T1ce","T2"]
+    .map(s => `<span class="scan ${s===gone?"off":""}">${s}</span>`).join("");
+  document.getElementById("bars").innerHTML = ["WT","TC","ET"].map(r =>
+    `<div class="row"><div class="lbl">${REG[r]}</div><div class="pair">${bar(D.normal[c][r], "#8a96b3")}${bar(D.dropout[c] ? D.dropout[c][r] : null, "#9cc0ff")}</div></div>`).join("");
+  const [k, t] = SAY[c];
+  document.getElementById("verdict").innerHTML = `<div class="verdict ${k}">${t}</div>`;
+}
+document.querySelectorAll("#choose button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#choose button").forEach(x => x.classList.toggle("on", x === b));
+  show(b.dataset.c);
+});
+show("all4");
+
+// heatmap
+function color(v) {
+  const stops = [[0,[226,88,74]], [0.5,[232,177,74]], [1,[126,226,176]]];
+  let i = v < 0.5 ? 0 : 1, a = stops[i], b = stops[i+1], t = (v - a[0]) / (b[0] - a[0]);
+  return `rgb(${a[1].map((x,k) => Math.round(x + (b[1][k]-x)*t)).join(",")})`;
+}
+let h = `<div class="h"></div><div class="h">Whole</div><div class="h">Core</div><div class="h">Active</div>`;
+for (const m of ["normal","dropout"]) for (const c in D[m]) {
+  h += `<div class="name">${m === "normal" ? "Normal" : "Dropout"} · ${NAME[c]}</div>`;
+  for (const r of ["WT","TC","ET"]) h += `<div class="cell" style="background:${color(D[m][c][r])}">${D[m][c][r].toFixed(2)}</div>`;
+}
+document.getElementById("heat").innerHTML = h;
+</script>
+</body>
+</html>
